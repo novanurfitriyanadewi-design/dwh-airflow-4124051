@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airflow DAG & Star Schema DWH Simulator - S1 SI Unipdu</title>
+<style>
+* { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { margin: 0; padding: 24px; background: #f0f4f8; color: #2d3748; }
+.container { max-width: 1250px; margin: 0 auto; }
+.card { background: #fff; border: 1px solid #cbd5e0; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,.04); }
+h1 { margin: 0 0 6px; color: #00bcd4; font-size: 26px; }
+h2 { margin: 0 0 14px; color: #2b6cb0; font-size: 19px; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #1a365d; }
+input, textarea { width: 100%; padding: 9px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; margin-bottom: 10px; font-family: Consolas, monospace; }
+button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 16px; font-weight: bold; font-size: 13px; color: #fff; transition: opacity .2s; }
+button:hover { opacity: .9; }
+.btn-blue { background: #3182ce; } .btn-green { background: #38a169; } .btn-orange { background: #dd6b20; } .btn-purple { background: #805ad5; }
+.dag-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f7fafc; padding: 18px; border-radius: 8px; border: 1px dashed #cbd5e0; margin: 14px 0; }
+.dag-node { flex: 1; padding: 14px; border-radius: 8px; border: 2px solid #cbd5e0; background: #fff; text-align: center; }
+.dag-node.running { border-color: #dd6b20; background: #fffaf0; }
+.dag-node.success { border-color: #38a169; background: #f0fff4; }
+.dag-node.failed { border-color: #e53e3e; background: #fff5f5; }
+.arrow { font-size: 22px; font-weight: bold; color: #718096; }
+.log-box { background: #1a202c; color: #68d391; padding: 14px; border-radius: 6px; font-family: Consolas, monospace; font-size: 12px; height: 210px; overflow-y: auto; white-space: pre-wrap; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+th { background: #2b6cb0; color: #fff; padding: 8px; text-align: left; border: 1px solid #cbd5e0; }
+td { padding: 7px 8px; border: 1px solid #cbd5e0; }
+tr:nth-child(even) { background: #f7fafc; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } .dag-box { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h1>MODERN DATA INGESTION (ELT) & STAR SCHEMA DWH SIMULATOR</h1>
+      <div style="color:#4a5568; font-size:14px;">Simulasi Orkestrasi DAG Apache Airflow & Cloud Firestore REST API • S1 Sistem Informasi Unipdu</div>
+    </div>
+    <span class="badge" style="background:#ebf8ff; color:#2b6cb0; font-size:13px; padding:6px 12px;">Minggu 5 • Milestone 1</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>1. Konfigurasi Project ID Firebase & Sumber Kolaborasi</h2>
+    <label>Project ID Firebase Anda Sendiri (Tempat DWH Disimpan):</label>
+    <input type="text" id="myProjectId" value="dwh-unipdu-4124051">
+    <label>NIM Anda:</label>
+    <input type="text" id="myNim" value="4124051">
+    <label>Daftar Project ID Firebase yang Akan Disedot (Pisahkan dengan koma):</label>
+    <textarea id="targetProjects" rows="3">dwh-unipdu-4124051, dwh-unipdu-4124045, dwh-unipdu-4124044, dwh-unipdu-4124005</textarea>
+    <div style="font-size:12px; color:#718096;">*Isi dengan Project ID Anda sendiri diikuti Project ID teman sekelas yang sudah memiliki data. Tambahkan lagi jika ada teman lain.</div>
+  </div>
+  <div class="card">
+    <h2>2. Data Seeder Hulu (Koleksi: transaksi_mentah)</h2>
+    <div style="font-size:12px; color:#4a5568; margin-bottom:6px;">Modifikasi data JSON mentah di bawah ini (sengaja tidak terstandar: huruf kecil, provinsi singkat, diskon persen, jumlah minus) lalu klik tombol unggah:</div>
+    <textarea id="seedJsonInput" rows="7"></textarea>
+    <button class="btn-blue" onclick="seedDataHulu()" style="width:100%;">🚀 Unggah Data Dummy Mentah ke Firestore Saya</button>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2 style="margin:0; border:none;">3. Apache Airflow DAG Orchestrator Simulator (dag_ingestion_retail)</h2>
+    <button class="btn-purple" onclick="runFullDagPipeline()">▶ Trigger Full DAG (Extract >> Load >> Transform)</button>
+  </div>
+  <div class="dag-box">
+    <div id="nodeExtract" class="dag-node">
+      <strong style="color:#2b6cb0;">Task 1: extract_api_to_landing</strong><br>
+      <span style="font-size:12px; color:#4a5568;">Menarik REST API Multi-Firebase ke koleksi <code>landing_zone_raw</code> berpartisi tanggal</span><br><br>
+      <button class="btn-blue" onclick="taskExtractToLanding()">Jalankan Task 1</button>
+    </div>
+    <div class="arrow">&gt;&gt;</div>
+    <div id="nodeTransform" class="dag-node">
+      <strong style="color:#276749;">Task 2: transform_to_star_schema</strong><br>
+      <span style="font-size:12px; color:#4a5568;">Cleansing, Enrichment, & Load ke 6 Koleksi <code>dim_*</code> dan <code>fakta_penjualan</code></span><br><br>
+      <button class="btn-green" onclick="taskTransformToStarSchema()">Jalankan Task 2</button>
+    </div>
+    <div class="arrow">&gt;&gt;</div>
+    <div id="nodeVerify" class="dag-node">
+      <strong style="color:#c05621;">Task 3: olap_star_schema_join</strong><br>
+      <span style="font-size:12px; color:#4a5568;">Mengambil 6 koleksi Skema Bintang & menampilkan perbandingan Before vs After</span><br><br>
+      <button class="btn-orange" onclick="taskRenderTables()">Tampilkan Tabel DWH</button>
+    </div>
+  </div>
+  <label>Console Audit Log Pipeline (Real-time):</label>
+  <div id="logConsole" class="log-box">[SYSTEM READY] Silakan sesuaikan Project ID dan NIM Anda, lalu mulai dari Langkah 2 (Unggah Data Mentah).</div>
+</div>
+
+<div class="card">
+  <h2>4. Tabel Data Mentah di Landing Zone (SEBELUM TRANSFORM - Koleksi: landing_zone_raw)</h2>
+  <div id="rawTableContainer" style="overflow-x:auto;"><i style="color:#718096; font-size:13px;">Belum ada data. Klik "Tampilkan Tabel DWH" atau "Trigger Full DAG".</i></div>
+</div>
+
+<div class="card">
+  <h2>5. Tabel Hasil JOIN 6 Koleksi Skema Bintang DWH (SESUDAH TRANSFORM - Bersih & Terstandar)</h2>
+  <div id="dwhTableContainer" style="overflow-x:auto;"><i style="color:#718096; font-size:13px;">Belum ada data. Klik "Tampilkan Tabel DWH" atau "Trigger Full DAG".</i></div>
+</div>
+
+</div>
+
+<script>
+// Katalog master untuk enrichment saat transform
+const MASTER_PRODUK = {
+  "PRD-001": { sk: 1, nama: "Laptop ProBook 14", merek: "TechBrand", harga_dasar: 8500000, kat: "Laptop", induk: "Komputer & Aksesoris", sup: "PT Mitra Komputindo", kota_sup: "Jakarta" },
+  "PRD-002": { sk: 2, nama: "Mouse Wireless M20", merek: "ClickGear", harga_dasar: 120000, kat: "Aksesoris PC", induk: "Komputer & Aksesoris", sup: "CV Jaya Abadi", kota_sup: "Surabaya" },
+  "PRD-003": { sk: 3, nama: "Monitor LED 24 Inch", merek: "VisionPlus", harga_dasar: 1650000, kat: "Monitor", induk: "Komputer & Aksesoris", sup: "PT Mitra Komputindo", kota_sup: "Jakarta" },
+  "PRD-004": { sk: 4, nama: "Mechanical Keyboard RGB", merek: "KeyTech", harga_dasar: 350000, kat: "Keyboard", induk: "Komputer & Aksesoris", sup: "CV Jaya Abadi", kota_sup: "Surabaya" },
+  "PRD-005": { sk: 5, nama: "SSD NVMe 1TB Gen4", merek: "FlashCore", harga_dasar: 950000, kat: "Storage", induk: "Komponen PC", sup: "PT Nusantara Data", kota_sup: "Bandung" }
+};
+const MASTER_KURIR = {
+  "KUR-01": { sk: 1, nama: "JNE", layanan: "Reguler" },
+  "KUR-02": { sk: 2, nama: "SiCepat", layanan: "BEST" },
+  "KUR-03": { sk: 3, nama: "J&T Express", layanan: "Ekonomi" },
+  "KUR-04": { sk: 4, nama: "Pos Indonesia", layanan: "Kilat Khusus" }
+};
+const MASTER_BAYAR = {
+  "PAY-01": { sk: 1, nama: "QRIS", jenis: "E-Wallet" },
+  "PAY-02": { sk: 2, nama: "BCA Virtual Account", jenis: "Transfer Bank" },
+  "PAY-03": { sk: 3, nama: "GoPay", jenis: "E-Wallet" },
+  "PAY-04": { sk: 4, nama: "Mandiri Virtual Account", jenis: "Transfer Bank" }
+};
+
+function initSeederTemplate() {
+  const nim = document.getElementById("myNim").value.trim() || "4124051";
+  const sample = [
+    { id_pesanan_nk: `ORD-${nim}-01`, tanggal_penjualan: "2026-10-05", id_produk_nk: "PRD-002",
+      id_pelanggan_nk: `CUST-${nim}-01`, nama_pelanggan: "rina kartika", jenis_kelamin: "P",
+      tanggal_lahir: "1998-04-17", alamat: "Jl. Asia Afrika No. 21", nama_kota: "bandung", nama_provinsi: "jabar",
+      id_kurir_nk: "KUR-03", id_metode_bayar_nk: "PAY-03", jumlah: 2, harga_satuan: 125000, diskon_persen: "15%", ongkos_kirim: 12000 },
+    { id_pesanan_nk: `ORD-${nim}-02`, tanggal_penjualan: "2026-10-12", id_produk_nk: "PRD-005",
+      id_pelanggan_nk: `CUST-${nim}-02`, nama_pelanggan: "DEDI PRASETYO", jenis_kelamin: "Pria",
+      tanggal_lahir: "1991-03-08", alamat: "Jl. Gatot Subroto No. 5", nama_kota: "MEDAN", nama_provinsi: "sumut",
+      id_kurir_nk: "KUR-04", id_metode_bayar_nk: "PAY-04", jumlah: -1, harga_satuan: 975000, diskon_persen: "5%", ongkos_kirim: 30000 },
+    { id_pesanan_nk: `ORD-${nim}-03`, tanggal_penjualan: "2026-10-18", id_produk_nk: "PRD-002",
+      id_pelanggan_nk: `CUST-${nim}-03`, nama_pelanggan: "maya putri", jenis_kelamin: "wanita",
+      tanggal_lahir: "2003-07-21", alamat: "Jl. Sudirman No. 14", nama_kota: "palembang", nama_provinsi: "sumsel",
+      id_kurir_nk: "KUR-02", id_metode_bayar_nk: "PAY-02", jumlah: 3, harga_satuan: 120000, diskon_persen: "0%", ongkos_kirim: 15000 }
+  ];
+  document.getElementById("seedJsonInput").value = JSON.stringify(sample, null, 2);
+}
+window.onload = initSeederTemplate;
+
+// Helper umum
+function writeLog(msg) {
+  const box = document.getElementById("logConsole");
+  box.textContent += `\n[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.scrollTop = box.scrollHeight;
+}
+function esc(s) {
+  return String(s ?? "-").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const num = v => Number(v || 0).toLocaleString("id-ID");
+
+function toFirestoreFields(obj) {
+  const fields = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === null || v === undefined) continue;
+    if (typeof v === "number" && Number.isFinite(v)) fields[k] = Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+    else fields[k] = { stringValue: String(v) };
+  }
+  return { fields };
+}
+function fromFirestoreDoc(doc) {
+  const res = {};
+  for (const [k, v] of Object.entries(doc.fields || {})) {
+    if (v.integerValue !== undefined) res[k] = parseInt(v.integerValue, 10);
+    else if (v.doubleValue !== undefined) res[k] = parseFloat(v.doubleValue);
+    else if (v.stringValue !== undefined) res[k] = v.stringValue;
+  }
+  return res;
+}
+async function upsertDoc(pid, col, docId, data) {
+  const url = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/${col}/${encodeURIComponent(docId)}`;
+  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(toFirestoreFields(data)) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} pada ${col}/${docId}`);
+}
+async function fetchCollection(pid, col) {
+  let out = [], token = "";
+  do {
+    const url = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/${col}?pageSize=300` + (token ? `&pageToken=${encodeURIComponent(token)}` : "");
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} saat mengambil ${pid}/${col}`);
+    const json = await res.json();
+    out = out.concat((json.documents || []).map(fromFirestoreDoc));
+    token = json.nextPageToken || "";
+  } while (token);
+  return out;
+}
+
+// Fungsi cleansing & enrichment
+function toTitleCase(str) { return String(str).trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
+function cleanGender(val) {
+  const v = String(val).trim().toLowerCase();
+  if (["l", "laki-laki", "laki", "pria", "cowok", "m", "male"].includes(v)) return "Laki-laki";
+  if (["p", "perempuan", "wanita", "cewek", "f", "female"].includes(v)) return "Perempuan";
+  return "Tidak Diketahui";
+}
+function mapProvinsiPulau(provRaw) {
+  const p = String(provRaw).trim().toLowerCase();
+  const map = {
+    "jatim": ["Jawa Timur", "Jawa"], "jawa timur": ["Jawa Timur", "Jawa"],
+    "jateng": ["Jawa Tengah", "Jawa"], "jawa tengah": ["Jawa Tengah", "Jawa"],
+    "jabar": ["Jawa Barat", "Jawa"], "jawa barat": ["Jawa Barat", "Jawa"],
+    "dki": ["DKI Jakarta", "Jawa"], "jakarta": ["DKI Jakarta", "Jawa"],
+    "diy": ["DI Yogyakarta", "Jawa"], "yogyakarta": ["DI Yogyakarta", "Jawa"],
+    "banten": ["Banten", "Jawa"], "sumut": ["Sumatera Utara", "Sumatera"],
+    "sumbar": ["Sumatera Barat", "Sumatera"], "sumsel": ["Sumatera Selatan", "Sumatera"],
+    "bali": ["Bali", "Bali & Nusa Tenggara"], "kaltim": ["Kalimantan Timur", "Kalimantan"],
+    "kalsel": ["Kalimantan Selatan", "Kalimantan"], "sulsel": ["Sulawesi Selatan", "Sulawesi"]
+  };
+  return map[p] || [toTitleCase(provRaw), "Indonesia"];
+}
+function calcKelompokUsia(tgl) {
+  const age = new Date().getFullYear() - (parseInt(String(tgl).substring(0, 4), 10) || 2000);
+  if (age <= 25) return "Remaja/Muda (<=25)";
+  if (age <= 35) return "Dewasa Muda (26-35)";
+  if (age <= 50) return "Dewasa (36-50)";
+  return "Lansia (>50)";
+}
+function hashCustomerSk(nk) {
+  let h = 0;
+  for (let i = 0; i < nk.length; i++) h = ((h << 5) - h) + nk.charCodeAt(i);
+  return Math.abs(h % 900000) + 100000;
+}
+
+// Seeder
+async function seedDataHulu() {
+  const myPid = document.getElementById("myProjectId").value.trim();
+  try {
+    const rows = JSON.parse(document.getElementById("seedJsonInput").value);
+    writeLog(`[SEEDER] Mengunggah ${rows.length} transaksi mentah ke ${myPid}/transaksi_mentah ...`);
+    for (const r of rows) {
+      await upsertDoc(myPid, "transaksi_mentah", r.id_pesanan_nk, r);
+      writeLog(`[SEEDER OK] Dokumen ${r.id_pesanan_nk} berhasil disimpan.`);
+    }
+  } catch (err) {
+    writeLog(`[SEEDER ERROR] ${err.message}`);
+  }
+}
+
+// Task 1: extract multi-Firebase ke landing zone
+async function taskExtractToLanding() {
+  const node = document.getElementById("nodeExtract");
+  node.className = "dag-node running";
+  const myPid = document.getElementById("myProjectId").value.trim();
+  const targets = [...new Set(document.getElementById("targetProjects").value.split(",").map(s => s.trim()).filter(Boolean))];
+  const now = new Date();
+  const partitionPath = `orders/year=${now.getFullYear()}/month=${String(now.getMonth() + 1).padStart(2, "0")}/day=${String(now.getDate()).padStart(2, "0")}`;
+
+  writeLog(`[TASK 1: EXTRACT] Memulai penarikan REST API dari ${targets.length} project Firebase...`);
+  let total = 0;
+  for (const pid of targets) {
+    try {
+      const docs = await fetchCollection(pid, "transaksi_mentah");
+      for (const d of docs) {
+        if (!d.id_pesanan_nk) continue;
+        d.sumber_project = pid;
+        d.partition_path = partitionPath;
+        await upsertDoc(myPid, "landing_zone_raw", d.id_pesanan_nk, d);
+        total++;
+      }
+      writeLog(`[EXTRACT OK] Berhasil menyedot ${docs.length} dokumen dari project '${pid}'`);
+    } catch (err) {
+      writeLog(`[EXTRACT WARN] Gagal menarik dari '${pid}': ${err.message} (melewati project ini...)`);
+    }
+  }
+  node.className = total > 0 ? "dag-node success" : "dag-node failed";
+  writeLog(`[LANDING ZONE SELESAI] Total ${total} dokumen mentah disimpan di '${myPid}/landing_zone_raw' (${partitionPath})`);
+}
+
+// Task 2: transform ke 6 koleksi skema bintang
+async function taskTransformToStarSchema() {
+  const node = document.getElementById("nodeTransform");
+  node.className = "dag-node running";
+  const myPid = document.getElementById("myProjectId").value.trim();
+  const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const namaBulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+  try {
+    writeLog(`[TASK 2: TRANSFORM] Membaca data mentah dari '${myPid}/landing_zone_raw'...`);
+    const rawDocs = await fetchCollection(myPid, "landing_zone_raw");
+    let ok = 0, skip = 0;
+
+    for (const r of rawDocs) {
+      try {
+        const dt = new Date(r.tanggal_penjualan);
+        if (isNaN(dt)) throw new Error("tanggal_penjualan tidak valid");
+        const y = dt.getFullYear(), m = dt.getMonth() + 1, day = dt.getDate();
+        const sk_waktu = parseInt(`${y}${String(m).padStart(2, "0")}${String(day).padStart(2, "0")}`, 10);
+        await upsertDoc(myPid, "dim_waktu", String(sk_waktu), {
+          sk_waktu, tanggal_penjualan: r.tanggal_penjualan, hari: day, bulan: m, nama_bulan: namaBulan[m],
+          kuartal: `Q${Math.floor((m - 1) / 3) + 1}`, tahun: y, nama_hari: namaHari[dt.getDay()]
+        });
+
+        const prd = MASTER_PRODUK[r.id_produk_nk] || MASTER_PRODUK["PRD-001"];
+        await upsertDoc(myPid, "dim_produk", String(prd.sk), {
+          sk_produk: prd.sk, id_produk_nk: r.id_produk_nk, nama_produk: prd.nama, merek: prd.merek,
+          harga_dasar: prd.harga_dasar, nama_kategori: prd.kat, nama_kategori_indk: prd.induk,
+          nama_supplier: prd.sup, kota_supplier: prd.kota_sup
+        });
+
+        const sk_pelanggan = hashCustomerSk(String(r.id_pelanggan_nk));
+        const [provBersih, pulau] = mapProvinsiPulau(r.nama_provinsi);
+        const namaBersih = toTitleCase(r.nama_pelanggan);
+        const genderBersih = cleanGender(r.jenis_kelamin);
+        await upsertDoc(myPid, "dim_pelanggan", String(sk_pelanggan), {
+          sk_pelanggan, id_pelanggan_nk: r.id_pelanggan_nk, nama_pelanggan: namaBersih, jenis_kelamin: genderBersih,
+          tanggal_lahir: r.tanggal_lahir, kelompok_usia: calcKelompokUsia(r.tanggal_lahir), alamat: r.alamat,
+          nama_kota: toTitleCase(r.nama_kota), nama_provinsi: provBersih, pulau
+        });
+
+        const kur = MASTER_KURIR[r.id_kurir_nk] || MASTER_KURIR["KUR-01"];
+        await upsertDoc(myPid, "dim_kurir", String(kur.sk), {
+          sk_kurir: kur.sk, id_kurir_nk: r.id_kurir_nk, nama_kurir: kur.nama, jenis_layanan: kur.layanan
+        });
+
+        const byr = MASTER_BAYAR[r.id_metode_bayar_nk] || MASTER_BAYAR["PAY-01"];
+        await upsertDoc(myPid, "dim_metode_bayar", String(byr.sk), {
+          sk_metode_bayar: byr.sk, id_metode_bayar_nk: r.id_metode_bayar_nk, nama_metode: byr.nama, jenis_metode: byr.jenis
+        });
+
+        const jumlah = Math.abs(parseInt(r.jumlah, 10)) || 1;
+        const harga = parseInt(r.harga_satuan, 10) || prd.harga_dasar;
+        const bruto = jumlah * harga;
+        const diskonRp = Math.round(bruto * ((parseFloat(String(r.diskon_persen || "0").replace("%", "")) || 0) / 100));
+        const neto = bruto - diskonRp;
+        await upsertDoc(myPid, "fakta_penjualan", r.id_pesanan_nk, {
+          sk_waktu, sk_produk: prd.sk, sk_pelanggan, sk_kurir: kur.sk, sk_metode_bayar: byr.sk,
+          id_pesanan_nk: r.id_pesanan_nk, jumlah, harga_satuan: harga, diskon: diskonRp,
+          total_harga_bruto: bruto, total_penjualan_neto: neto, ongkos_kirim: parseInt(r.ongkos_kirim, 10) || 0
+        });
+
+        ok++;
+        writeLog(`[TRANSFORM OK] ${r.id_pesanan_nk}: '${r.nama_pelanggan}' (${r.jenis_kelamin}, ${r.nama_provinsi}) -> '${namaBersih}' (${genderBersih}, ${provBersih} - Pulau ${pulau}) | Neto: Rp ${num(neto)}`);
+      } catch (rowErr) {
+        skip++;
+        writeLog(`[TRANSFORM SKIP] ${r.id_pesanan_nk || "(tanpa id)"}: ${rowErr.message}`);
+      }
+    }
+    node.className = "dag-node success";
+    writeLog(`[STAR SCHEMA SELESAI] ${ok} baris diproses, ${skip} dilewati. Koleksi dimensi & fakta diperbarui di Firestore!`);
+  } catch (err) {
+    node.className = "dag-node failed";
+    writeLog(`[TRANSFORM ERROR] ${err.message}`);
+  }
+}
+
+// Task 3: tabel Before vs After
+async function taskRenderTables() {
+  const node = document.getElementById("nodeVerify");
+  node.className = "dag-node running";
+  const myPid = document.getElementById("myProjectId").value.trim();
+
+  try {
+    writeLog(`[TASK 3: OLAP JOIN] Mengambil data Landing Zone & 6 koleksi Skema Bintang...`);
+    const [rawList, faktaList, waktuList, produkList, pelangganList, kurirList, bayarList] = await Promise.all([
+      "landing_zone_raw", "fakta_penjualan", "dim_waktu", "dim_produk", "dim_pelanggan", "dim_kurir", "dim_metode_bayar"
+    ].map(c => fetchCollection(myPid, c)));
+
+    let htmlRaw = `<table><thead><tr><th>id_pesanan_nk</th><th>sumber_project</th><th>partition_path</th><th>nama_pelanggan (Raw)</th><th>jenis_kelamin (Raw)</th><th>provinsi (Raw)</th><th>jumlah (Raw)</th><th>diskon_persen</th></tr></thead><tbody>`;
+    for (const r of rawList) {
+      htmlRaw += `<tr><td>${esc(r.id_pesanan_nk)}</td><td>${esc(r.sumber_project)}</td><td><code>${esc(r.partition_path)}</code></td><td>${esc(r.nama_pelanggan)}</td><td>${esc(r.jenis_kelamin)}</td><td>${esc(r.nama_provinsi)}</td><td>${esc(r.jumlah)}</td><td>${esc(r.diskon_persen)}</td></tr>`;
+    }
+    document.getElementById("rawTableContainer").innerHTML = htmlRaw + `</tbody></table>`;
+
+    const idx = (list, key) => Object.fromEntries(list.map(x => [x[key], x]));
+    const mapW = idx(waktuList, "sk_waktu"), mapPr = idx(produkList, "sk_produk"), mapPl = idx(pelangganList, "sk_pelanggan"),
+          mapK = idx(kurirList, "sk_kurir"), mapB = idx(bayarList, "sk_metode_bayar");
+
+    let htmlDwh = `<table><thead><tr><th>id_pesanan_nk</th><th>Tanggal & Kuartal</th><th>Pelanggan (Bersih)</th><th>Gender</th><th>Kelompok Usia</th><th>Provinsi & Pulau</th><th>Produk & Merek</th><th>Kurir & Bayar</th><th>Qty</th><th>Bruto (Rp)</th><th>Diskon (Rp)</th><th>Neto (Rp)</th></tr></thead><tbody>`;
+    for (const f of faktaList) {
+      const w = mapW[f.sk_waktu] || {}, pr = mapPr[f.sk_produk] || {}, pl = mapPl[f.sk_pelanggan] || {},
+            k = mapK[f.sk_kurir] || {}, b = mapB[f.sk_metode_bayar] || {};
+      htmlDwh += `<tr>
+        <td><strong>${esc(f.id_pesanan_nk)}</strong></td>
+        <td>${esc(w.tanggal_penjualan)} (${esc(w.kuartal)}, ${esc(w.nama_hari)})</td>
+        <td>${esc(pl.nama_pelanggan)}</td><td>${esc(pl.jenis_kelamin)}</td><td>${esc(pl.kelompok_usia)}</td>
+        <td>${esc(pl.nama_provinsi)} (<strong>${esc(pl.pulau)}</strong>)</td>
+        <td>${esc(pr.nama_produk)} (${esc(pr.merek)})</td>
+        <td>${esc(k.nama_kurir)} / ${esc(b.nama_metode)}</td>
+        <td>${esc(f.jumlah)}</td><td>${num(f.total_harga_bruto)}</td><td>${num(f.diskon)}</td>
+        <td style="background:#f0fff4; font-weight:bold; color:#22543d;">${num(f.total_penjualan_neto)}</td>
+      </tr>`;
+    }
+    document.getElementById("dwhTableContainer").innerHTML = htmlDwh + `</tbody></table>`;
+
+    node.className = "dag-node success";
+    writeLog(`[OLAP JOIN SELESAI] Menampilkan perbandingan ${rawList.length} data mentah vs ${faktaList.length} baris Fakta Penjualan!`);
+  } catch (err) {
+    node.className = "dag-node failed";
+    writeLog(`[OLAP ERROR] ${err.message}`);
+  }
+}
+
+// Trigger full DAG
+async function runFullDagPipeline() {
+  writeLog(`======================================================`);
+  writeLog(`[AIRFLOW DAG TRIGGERED] Menjalankan dag_ingestion_retail...`);
+  await taskExtractToLanding();
+  await taskTransformToStarSchema();
+  await taskRenderTables();
+  writeLog(`[DAG RUN COMPLETED] Seluruh rangkaian Task selesai dieksekusi!`);
+}
+</script>
+</body>
+</html>
