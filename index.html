@@ -1,412 +1,186 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Airflow DAG & Star Schema DWH Simulator - S1 SI Unipdu</title>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Praktikum Minggu 7 – Data Quality & DataOps (Firebase Full)</title>
 <style>
-* { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { margin: 0; padding: 24px; background: #f0f4f8; color: #2d3748; }
-.container { max-width: 1250px; margin: 0 auto; }
-.card { background: #fff; border: 1px solid #cbd5e0; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,.04); }
-h1 { margin: 0 0 6px; color: #00bcd4; font-size: 26px; }
-h2 { margin: 0 0 14px; color: #2b6cb0; font-size: 19px; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #1a365d; }
-input, textarea { width: 100%; padding: 9px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; margin-bottom: 10px; font-family: Consolas, monospace; }
-button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 16px; font-weight: bold; font-size: 13px; color: #fff; transition: opacity .2s; }
-button:hover { opacity: .9; }
-.btn-blue { background: #3182ce; } .btn-green { background: #38a169; } .btn-orange { background: #dd6b20; } .btn-purple { background: #805ad5; }
-.dag-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f7fafc; padding: 18px; border-radius: 8px; border: 1px dashed #cbd5e0; margin: 14px 0; }
-.dag-node { flex: 1; padding: 14px; border-radius: 8px; border: 2px solid #cbd5e0; background: #fff; text-align: center; }
-.dag-node.running { border-color: #dd6b20; background: #fffaf0; }
-.dag-node.success { border-color: #38a169; background: #f0fff4; }
-.dag-node.failed { border-color: #e53e3e; background: #fff5f5; }
-.arrow { font-size: 22px; font-weight: bold; color: #718096; }
-.log-box { background: #1a202c; color: #68d391; padding: 14px; border-radius: 6px; font-family: Consolas, monospace; font-size: 12px; height: 210px; overflow-y: auto; white-space: pre-wrap; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-th { background: #2b6cb0; color: #fff; padding: 8px; text-align: left; border: 1px solid #cbd5e0; }
-td { padding: 7px 8px; border: 1px solid #cbd5e0; }
-tr:nth-child(even) { background: #f7fafc; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } .dag-box { flex-direction: column; } }
-</style>
-</head>
-<body>
-<div class="container">
-
-<div class="card">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <div>
-      <h1>MODERN DATA INGESTION (ELT) & STAR SCHEMA DWH SIMULATOR</h1>
-      <div style="color:#4a5568; font-size:14px;">Simulasi Orkestrasi DAG Apache Airflow & Cloud Firestore REST API • S1 Sistem Informasi Unipdu</div>
-    </div>
-    <span class="badge" style="background:#ebf8ff; color:#2b6cb0; font-size:13px; padding:6px 12px;">Minggu 5 • Milestone 1</span>
-  </div>
+:root{--bg:#f3f6f6;--card:#fff;--ink:#16252b;--mut:#5b6b72;--line:#cfdadd;--ac:#00838f;--ok:#2f855a;--bad:#c53030;--warn:#b7791f;--code:#eaf1f2;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1a1e;--card:#162429;--ink:#e6eef0;--mut:#9fb1b7;--line:#2c4047;--ac:#4dd0e1;--ok:#68d391;--bad:#fc8181;--warn:#ecc94b;--code:#1d3037;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,"Segoe UI",sans-serif}
+header{padding:20px 24px;border-bottom:3px solid var(--ac)}h1{margin:0;font-size:22px}header p{margin:4px 0 0;color:var(--mut);font-size:14px}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;background:var(--card);border:1px solid var(--line);padding:12px;border-radius:6px}
+label{font-size:13px;color:var(--mut);display:block}input,select,textarea{width:100%;padding:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;font:inherit}
+textarea{font:13px/1.4 Consolas,monospace;min-height:110px}
+nav{display:flex;flex-wrap:wrap;gap:4px;margin:14px 0 0}nav button{border:1px solid var(--line);border-bottom:none;background:var(--bg);color:var(--ink);padding:8px 14px;border-radius:6px 6px 0 0;cursor:pointer;font:inherit}
+nav button.on{background:var(--card);border-top:3px solid var(--ac);font-weight:600}
+section{display:none;background:var(--card);border:1px solid var(--line);padding:18px;border-radius:0 6px 6px 6px}section.on{display:block}
+h2{margin:0 0 8px;font-size:19px;color:var(--ac)}h3{font-size:16px;margin:16px 0 4px}
+button.go{background:var(--ac);color:#fff;border:0;padding:8px 14px;border-radius:4px;cursor:pointer;font:inherit;margin:6px 6px 6px 0}button.go.alt{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+@media(prefers-color-scheme:dark){button.go{color:#04242a}}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}td,th{border:1px solid var(--line);padding:6px 9px;text-align:left}th{background:var(--code)}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+pre,code{background:var(--code);font:13px Consolas,monospace}pre{padding:10px;overflow:auto;border-radius:4px}code{padding:1px 4px}
+.log{background:var(--code);padding:10px;border-radius:4px;font:13px/1.6 Consolas,monospace;min-height:60px;white-space:pre-wrap}
+.box{border-left:5px solid var(--ac);background:var(--code);padding:8px 12px;margin:10px 0;border-radius:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.two{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>Praktikum Minggu 7 – Data Quality, Automated Testing, CI/CD, Observability & Katalog</h1>
+<p>Data Warehouse (41PP19002) · S1 Sistem Informasi · FST Unipdu · Dosen: Nufan Balafif, S.Kom., MM. · 150 menit · 100% Firebase (Cloud Firestore + Hosting)</p></header>
+<main>
+<div class="cfg">
+<div><label>Firebase Project ID</label><input id="pid" placeholder="mis. dw-unipdu-nim"></div>
+<div><label>Web API Key</label><input id="key" placeholder="AIza..."></div>
+<div><label>Koleksi staging (sumber uji)</label><input id="stg" value="stg_orders"></div>
+<div><label>Koleksi dimensi</label><input id="dim" value="dim_customers"></div>
+<div><label>Koleksi gold / marts</label><input id="gold" value="fct_orders"></div>
 </div>
+<nav id="nav"></nav>
 
-<div class="grid-2">
-  <div class="card">
-    <h2>1. Konfigurasi Project ID Firebase & Sumber Kolaborasi</h2>
-    <label>Project ID Firebase Anda Sendiri (Tempat DWH Disimpan):</label>
-    <input type="text" id="myProjectId" value="dwh-unipdu-4124051">
-    <label>NIM Anda:</label>
-    <input type="text" id="myNim" value="4124051">
-    <label>Daftar Project ID Firebase yang Akan Disedot (Pisahkan dengan koma):</label>
-    <textarea id="targetProjects" rows="3">dwh-unipdu-4124051, dwh-unipdu-4124045, dwh-unipdu-4124044, dwh-unipdu-4124005</textarea>
-    <div style="font-size:12px; color:#718096;">*Isi dengan Project ID Anda sendiri diikuti Project ID teman sekelas yang sudah memiliki data. Tambahkan lagi jika ada teman lain.</div>
-  </div>
-  <div class="card">
-    <h2>2. Data Seeder Hulu (Koleksi: transaksi_mentah)</h2>
-    <div style="font-size:12px; color:#4a5568; margin-bottom:6px;">Modifikasi data JSON mentah di bawah ini (sengaja tidak terstandar: huruf kecil, provinsi singkat, diskon persen, jumlah minus) lalu klik tombol unggah:</div>
-    <textarea id="seedJsonInput" rows="7"></textarea>
-    <button class="btn-blue" onclick="seedDataHulu()" style="width:100%;">🚀 Unggah Data Dummy Mentah ke Firestore Saya</button>
-  </div>
-</div>
+<section id="t0"><h2>Panduan & Alur Praktikum</h2>
+<p>Kelanjutan Minggu 5–6: semua pengujian, gerbang CI/CD, observability, dan katalog dijalankan di browser terhadap <b>Cloud Firestore</b> (REST API), tanpa instalasi dbt atau server. Setiap konsep slide dipetakan ke satu tab:</p>
+<table><tr><th>Tab</th><th>Konsep slide</th><th>Setara di dbt</th><th>Menit</th></tr>
+<tr><td>Setup</td><td>Silent data corruption (slide 8)</td><td>—</td><td>15</td></tr>
+<tr><td>Tests</td><td>6 dimensi mutu, generic, singular, GX (10–14)</td><td><code>schema.yml</code>, <code>tests/</code>, dbt-expectations</td><td>40</td></tr>
+<tr><td>CI/CD</td><td>Sandbox, gatekeeper, teardown, circuit breaker (16–17, 20)</td><td>GitHub Actions + <code>dbt build</code></td><td>35</td></tr>
+<tr><td>Observability</td><td>5 pilar (15)</td><td>Monte Carlo / source freshness</td><td>30</td></tr>
+<tr><td>Katalog</td><td>Dokumentasi otomatis (18)</td><td><code>dbt docs generate</code></td><td>15</td></tr>
+<tr><td>Laporan</td><td>Studi kasus PBL (22)</td><td>—</td><td>15</td></tr></table>
+<h3>Prasyarat Firebase (sekali saja)</h3>
+<ol><li>Buka <b>Firebase Console</b> → proyek Minggu 5/6 (atau buat baru) → <b>Firestore Database</b> → Create database (mode test).</li>
+<li><b>Project settings</b> → salin <b>Project ID</b> dan <b>Web API Key</b> ke kolom di atas.</li>
+<li>Firestore → <b>Rules</b> (hanya untuk praktikum, batasi tanggal akhir):
+<pre>rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    match /{document=**} { allow read, write: if request.time &lt; timestamp.date(2026, 12, 31); }
+  }
+}</pre></li>
+<li>Opsional – deploy file ini ke <b>Firebase Hosting</b>: <code>npm i -g firebase-tools</code> → <code>firebase login</code> → <code>firebase init hosting</code> (public = folder berisi index.html) → <code>firebase deploy --only hosting</code>.</li></ol>
+<div class="box">Koleksi sistem yang dibuat otomatis: <code>_pipeline</code> (status gerbang), <code>_obs_runs</code> (riwayat observability), <code>_catalog</code> (katalog data), <code>analytics_pr_N</code> (sandbox sementara).</div>
+<h3>Deliverable (Milestone 3 – unggah ke Canvas)</h3>
+<ol><li>Tangkapan layar tab Tests pada data <b>cacat</b> (FAIL) lalu data <b>bersih</b> (PASS semua).</li>
+<li>Kode test kustom <code>assert_no_duplicate_orders</code> beserta hasilnya.</li>
+<li>Tangkapan layar tab CI/CD: satu PR <b>BLOCKED</b> dan satu PR <b>MERGED</b>, plus dokumen <code>_pipeline/status</code> di Firebase Console.</li>
+<li>Tangkapan layar 3 run Observability (bersih, basi, cacat) dan koleksi <code>_obs_runs</code>.</li>
+<li>Tangkapan layar katalog data dan dokumen di <code>_catalog</code>.</li>
+<li>Jawaban 3 pertanyaan PBL di tab Laporan.</li></ol></section>
 
-<div class="card">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h2 style="margin:0; border:none;">3. Apache Airflow DAG Orchestrator Simulator (dag_ingestion_retail)</h2>
-    <button class="btn-purple" onclick="runFullDagPipeline()">▶ Trigger Full DAG (Extract >> Load >> Transform)</button>
-  </div>
-  <div class="dag-box">
-    <div id="nodeExtract" class="dag-node">
-      <strong style="color:#2b6cb0;">Task 1: extract_api_to_landing</strong><br>
-      <span style="font-size:12px; color:#4a5568;">Menarik REST API Multi-Firebase ke koleksi <code>landing_zone_raw</code> berpartisi tanggal</span><br><br>
-      <button class="btn-blue" onclick="taskExtractToLanding()">Jalankan Task 1</button>
-    </div>
-    <div class="arrow">&gt;&gt;</div>
-    <div id="nodeTransform" class="dag-node">
-      <strong style="color:#276749;">Task 2: transform_to_star_schema</strong><br>
-      <span style="font-size:12px; color:#4a5568;">Cleansing, Enrichment, & Load ke 6 Koleksi <code>dim_*</code> dan <code>fakta_penjualan</code></span><br><br>
-      <button class="btn-green" onclick="taskTransformToStarSchema()">Jalankan Task 2</button>
-    </div>
-    <div class="arrow">&gt;&gt;</div>
-    <div id="nodeVerify" class="dag-node">
-      <strong style="color:#c05621;">Task 3: olap_star_schema_join</strong><br>
-      <span style="font-size:12px; color:#4a5568;">Mengambil 6 koleksi Skema Bintang & menampilkan perbandingan Before vs After</span><br><br>
-      <button class="btn-orange" onclick="taskRenderTables()">Tampilkan Tabel DWH</button>
-    </div>
-  </div>
-  <label>Console Audit Log Pipeline (Real-time):</label>
-  <div id="logConsole" class="log-box">[SYSTEM READY] Silakan sesuaikan Project ID dan NIM Anda, lalu mulai dari Langkah 2 (Unggah Data Mentah).</div>
-</div>
+<section id="t1"><h2>Setup – Bangkitkan Data Uji di Firestore</h2>
+<p>Tombol di bawah menghapus isi koleksi staging & dimensi lalu mengisinya dengan 30 pelanggan dan ±100 pesanan. Pilih skenario:</p>
+<button class="go" onclick="seed('clean')">Data bersih</button>
+<button class="go alt" onclick="seed('dirty')">Data cacat (silent corruption)</button>
+<button class="go alt" onclick="seed('stale')">Data bersih tapi basi (&gt;30 jam)</button>
+<div class="log" id="seedOut">Belum ada aksi.</div>
+<h3>Cacat yang disuntikkan pada skenario "cacat"</h3>
+<ul><li>5 pesanan terduplikasi (<code>order_id</code> sama, dokumen berbeda – akibat retry)</li><li>4 <code>customer_id</code> NULL, 3 <code>customer_id</code> yatim (C999)</li><li>3 status <code>REFUND</code> di luar domain sah</li><li>2 diskon melebihi total belanja, 2 nominal pencilan 99.999.999</li><li>2 dokumen membawa kolom baru <code>harga_total</code> (schema drift)</li></ul>
+<p>Buka Firebase Console → Firestore dan buktikan sendiri bahwa seluruh dokumen berhasil tertulis ("status hijau") padahal isinya rusak.</p></section>
 
-<div class="card">
-  <h2>4. Tabel Data Mentah di Landing Zone (SEBELUM TRANSFORM - Koleksi: landing_zone_raw)</h2>
-  <div id="rawTableContainer" style="overflow-x:auto;"><i style="color:#718096; font-size:13px;">Belum ada data. Klik "Tampilkan Tabel DWH" atau "Trigger Full DAG".</i></div>
-</div>
+<section id="t2"><h2>Tests – Generic, Singular, dan Gaya Great Expectations</h2>
+<div class="two"><div><label>Konfigurasi test (setara <code>schema.yml</code>, format JSON)</label><textarea id="tests" style="min-height:230px"></textarea></div>
+<div><label>Test kustom (setara <code>tests/*.sql</code>): ekspresi JS yang <b>mengembalikan baris pelanggar</b>; PASS jika 0 baris. Variabel <code>r</code> = array baris staging.</label><textarea id="custom" style="min-height:230px">// TUGAS: tulis assert_no_duplicate_orders
+// kembalikan baris yang order_id-nya muncul lebih dari sekali
+r.filter(x => false)</textarea></div></div>
+<button class="go" onclick="doTests()">Jalankan semua test</button>
+<div id="testOut"></div>
+<div class="box">Tipe tersedia: <code>unique</code>, <code>not_null</code>, <code>accepted_values</code>, <code>relationships</code>, <code>discount_lte_amount</code>, <code>range</code> (min/max), <code>zscore</code> (pencilan statistik). Tambahkan baris JSON sendiri untuk kolom lain.</div></section>
 
-<div class="card">
-  <h2>5. Tabel Hasil JOIN 6 Koleksi Skema Bintang DWH (SESUDAH TRANSFORM - Bersih & Terstandar)</h2>
-  <div id="dwhTableContainer" style="overflow-x:auto;"><i style="color:#718096; font-size:13px;">Belum ada data. Klik "Tampilkan Tabel DWH" atau "Trigger Full DAG".</i></div>
-</div>
+<section id="t3"><h2>CI/CD – Gerbang Zero-Defect di Firestore</h2>
+<p>Simulasi satu Pull Request: salin staging ke sandbox <code>analytics_pr_N</code> → jalankan test → <b>merge</b> (promosi ke gold) hanya jika semua PASS → hapus sandbox (FinOps).</p>
+<label>Nomor PR</label><input id="pr" type="number" value="124" style="max-width:120px">
+<button class="go" onclick="doCI()">Jalankan pipeline PR</button>
+<button class="go alt" onclick="doDash()">Cek dashboard CEO</button>
+<div class="log" id="ciLog">Menunggu pipeline.</div><div id="dash"></div>
+<div class="box">Circuit breaker: gerbang menulis <code>_pipeline/status</code>. Dashboard menampilkan "Maintenance" bila status BLOCKED, bukan angka palsu.</div></section>
 
-</div>
+<section id="t4"><h2>Observability – 5 Pilar</h2>
+<label>SLA freshness (jam)</label><input id="sla" type="number" value="12" style="max-width:120px">
+<button class="go" onclick="doObs()">Jalankan snapshot observability</button>
+<div id="obsOut"></div>
+<div class="box">Volume & distribusi dibandingkan dengan snapshot sebelumnya di <code>_obs_runs</code>. Jalankan berurutan: bersih → basi → cacat, lalu amati pilar yang berubah.</div></section>
 
+<section id="t5"><h2>Katalog Data – Dokumentasi Hidup</h2>
+<button class="go" onclick="doCat()">Bangkitkan katalog (tulis ke <code>_catalog</code>)</button>
+<div id="catOut"></div></section>
+
+<section id="t6"><h2>Laporan & Studi Kasus PBL (30 menit diskusi)</h2>
+<div class="box"><b>Kasus:</b> PT BelanjaCepat Mega Retail – retry jaringan memuat transaksi dua kali ke <code>fct_sales</code>. Dashboard CEO: Rp120 Miliar; kas riil Rp60 Miliar.</div>
+<ol><li>Mengapa uji <code>unique</code> pada primary key dan observability <i>volume</i> wajib dipasang sebelum lapisan marts? Kaitkan dengan hasil run Anda.</li>
+<li>Tempel kode test kustom <code>assert_no_duplicate_orders</code> Anda dan bukti baris duplikat yang tertangkap (ID dokumen).</li>
+<li>Jelaskan bagaimana gerbang CI/CD dan <code>_pipeline/status</code> mencegah insiden ini; usulkan SOP mitigasi 3 langkah.</li></ol>
+<h3>Rubrik (Milestone 3)</h3>
+<table><tr><th>Komponen</th><th>Bobot</th></tr><tr><td>Test generic & kustom benar (FAIL→PASS)</td><td>30%</td></tr><tr><td>Gerbang CI/CD: BLOCKED & MERGED terbukti</td><td>25%</td></tr><tr><td>Observability 3 skenario terdokumentasi</td><td>20%</td></tr><tr><td>Katalog data lengkap</td><td>10%</td></tr><tr><td>Analisis PBL</td><td>15%</td></tr></table></section>
+</main>
 <script>
-// Katalog master untuk enrichment saat transform
-const MASTER_PRODUK = {
-  "PRD-001": { sk: 1, nama: "Laptop ProBook 14", merek: "TechBrand", harga_dasar: 8500000, kat: "Laptop", induk: "Komputer & Aksesoris", sup: "PT Mitra Komputindo", kota_sup: "Jakarta" },
-  "PRD-002": { sk: 2, nama: "Mouse Wireless M20", merek: "ClickGear", harga_dasar: 120000, kat: "Aksesoris PC", induk: "Komputer & Aksesoris", sup: "CV Jaya Abadi", kota_sup: "Surabaya" },
-  "PRD-003": { sk: 3, nama: "Monitor LED 24 Inch", merek: "VisionPlus", harga_dasar: 1650000, kat: "Monitor", induk: "Komputer & Aksesoris", sup: "PT Mitra Komputindo", kota_sup: "Jakarta" },
-  "PRD-004": { sk: 4, nama: "Mechanical Keyboard RGB", merek: "KeyTech", harga_dasar: 350000, kat: "Keyboard", induk: "Komputer & Aksesoris", sup: "CV Jaya Abadi", kota_sup: "Surabaya" },
-  "PRD-005": { sk: 5, nama: "SSD NVMe 1TB Gen4", merek: "FlashCore", harga_dasar: 950000, kat: "Storage", induk: "Komponen PC", sup: "PT Nusantara Data", kota_sup: "Bandung" }
-};
-const MASTER_KURIR = {
-  "KUR-01": { sk: 1, nama: "JNE", layanan: "Reguler" },
-  "KUR-02": { sk: 2, nama: "SiCepat", layanan: "BEST" },
-  "KUR-03": { sk: 3, nama: "J&T Express", layanan: "Ekonomi" },
-  "KUR-04": { sk: 4, nama: "Pos Indonesia", layanan: "Kilat Khusus" }
-};
-const MASTER_BAYAR = {
-  "PAY-01": { sk: 1, nama: "QRIS", jenis: "E-Wallet" },
-  "PAY-02": { sk: 2, nama: "BCA Virtual Account", jenis: "Transfer Bank" },
-  "PAY-03": { sk: 3, nama: "GoPay", jenis: "E-Wallet" },
-  "PAY-04": { sk: 4, nama: "Mandiri Virtual Account", jenis: "Transfer Bank" }
-};
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const S={pid:'',key:'',last:null};
+['Panduan','Setup','Tests','CI/CD','Observability','Katalog','Laporan'].forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>show(i);b.id='b'+i;$('nav').appendChild(b)});
+function show(i){for(let k=0;k<7;k++){$('t'+k).classList.toggle('on',k==i);$('b'+k).classList.toggle('on',k==i)}}show(0);
+$('tests').value=JSON.stringify([{type:"unique",col:"order_id"},{type:"not_null",col:"order_id"},{type:"not_null",col:"customer_id"},{type:"relationships",col:"customer_id",to:"dim_customers",field:"customer_id"},{type:"accepted_values",col:"order_status",values:["placed","shipped","delivered"]},{type:"discount_lte_amount"},{type:"range",col:"total_amount",min:1,max:1000000},{type:"zscore",col:"total_amount",z:3}],null,1);
+try{const o=JSON.parse(localStorage.getItem('w7')||'{}');$('pid').value=o.p||'dwh-unipdu-4124051';$('key').value=o.k||'AIzaSyD0zcbuy9VKMOrx0gXWaplwMOtQqqcueBk'}catch(e){}
+function cv(){S.pid=$('pid').value.trim();S.key=$('key').value.trim();try{localStorage.setItem('w7',JSON.stringify({p:S.pid,k:S.key}))}catch(e){}
+if(!S.pid||!S.key)throw new Error('Isi Project ID dan Web API Key terlebih dahulu');return{stg:$('stg').value.trim(),dim:$('dim').value.trim(),gold:$('gold').value.trim()}}
+const base=()=>`https://firestore.googleapis.com/v1/projects/${S.pid}/databases/(default)/documents`;
+const nm=(c,id)=>`projects/${S.pid}/databases/(default)/documents/${c}/${id}`;
+const enc=v=>v==null?{nullValue:null}:typeof v==='number'?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):typeof v==='boolean'?{booleanValue:v}:{stringValue:String(v)};
+const dec=f=>{const k=Object.keys(f)[0],v=f[k];return k==='nullValue'?null:(k==='integerValue'||k==='doubleValue')?Number(v):v};
+const put=(c,id,o)=>({update:{name:nm(c,id),fields:Object.fromEntries(Object.entries(o).map(([k,v])=>[k,enc(v)]))}}),del=(c,id)=>({delete:nm(c,id)});
+const strip=({_id,...r})=>r;
+async function list(c){let out=[],t='';do{const r=await fetch(`${base()}/${c}?pageSize=300&key=${S.key}${t?'&pageToken='+t:''}`),j=await r.json();if(j.error)throw new Error(j.error.message);(j.documents||[]).forEach(d=>{const o={_id:d.name.split('/').pop()};for(const k in d.fields||{})o[k]=dec(d.fields[k]);out.push(o)});t=j.nextPageToken||''}while(t);return out}
+async function commit(w){for(let i=0;i<w.length;i+=400){const r=await fetch(`${base()}:commit?key=${S.key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({writes:w.slice(i,i+400)})}),j=await r.json();if(j.error)throw new Error(j.error.message)}}
+const fail=(el,e)=>{el.innerHTML=`<p class="bad">Gagal: ${esc(e.message)}. Periksa Project ID, API Key, dan Rules Firestore.</p>`};
 
-function initSeederTemplate() {
-  const nim = document.getElementById("myNim").value.trim() || "4124051";
-  const sample = [
-    { id_pesanan_nk: `ORD-${nim}-01`, tanggal_penjualan: "2026-10-05", id_produk_nk: "PRD-002",
-      id_pelanggan_nk: `CUST-${nim}-01`, nama_pelanggan: "rina kartika", jenis_kelamin: "P",
-      tanggal_lahir: "1998-04-17", alamat: "Jl. Asia Afrika No. 21", nama_kota: "bandung", nama_provinsi: "jabar",
-      id_kurir_nk: "KUR-03", id_metode_bayar_nk: "PAY-03", jumlah: 2, harga_satuan: 125000, diskon_persen: "15%", ongkos_kirim: 12000 },
-    { id_pesanan_nk: `ORD-${nim}-02`, tanggal_penjualan: "2026-10-12", id_produk_nk: "PRD-005",
-      id_pelanggan_nk: `CUST-${nim}-02`, nama_pelanggan: "DEDI PRASETYO", jenis_kelamin: "Pria",
-      tanggal_lahir: "1991-03-08", alamat: "Jl. Gatot Subroto No. 5", nama_kota: "MEDAN", nama_provinsi: "sumut",
-      id_kurir_nk: "KUR-04", id_metode_bayar_nk: "PAY-04", jumlah: -1, harga_satuan: 975000, diskon_persen: "5%", ongkos_kirim: 30000 },
-    { id_pesanan_nk: `ORD-${nim}-03`, tanggal_penjualan: "2026-10-18", id_produk_nk: "PRD-002",
-      id_pelanggan_nk: `CUST-${nim}-03`, nama_pelanggan: "maya putri", jenis_kelamin: "wanita",
-      tanggal_lahir: "2003-07-21", alamat: "Jl. Sudirman No. 14", nama_kota: "palembang", nama_provinsi: "sumsel",
-      id_kurir_nk: "KUR-02", id_metode_bayar_nk: "PAY-02", jumlah: 3, harga_satuan: 120000, diskon_persen: "0%", ongkos_kirim: 15000 }
-  ];
-  document.getElementById("seedJsonInput").value = JSON.stringify(sample, null, 2);
-}
-window.onload = initSeederTemplate;
+function gen(mode){let s=7;const R=()=>(s=s*16807%2147483647)/2147483647,age=h=>new Date(Date.now()-h*36e5).toISOString();
+const cs=[...Array(30)].map((_,i)=>({customer_id:'C'+String(i+1).padStart(3,'0'),nama:'Pelanggan '+(i+1),kota:['Jombang','Surabaya','Malang','Kediri'][i%4]}));
+const os=[...Array(100)].map((_,i)=>{const a=Math.round(50+R()*450)*1000,id='ORD-'+String(i+1).padStart(4,'0');return{_id:id,order_id:id,customer_id:cs[Math.floor(R()*30)].customer_id,order_status:['placed','shipped','delivered'][Math.floor(R()*3)],total_amount:a,total_discount:Math.round(a*R()*0.1),updated_at:age(mode==='stale'?30+R()*5:R()*6)}});
+if(mode==='dirty'){for(let i=0;i<5;i++)os.push({...os[i],_id:os[i]._id+'-b'});[5,6,7,8].forEach(i=>os[i].customer_id=null);[9,10,11].forEach(i=>os[i].customer_id='C999');[12,13,14].forEach(i=>os[i].order_status='REFUND');[15,16].forEach(i=>os[i].total_discount=os[i].total_amount+5000);[17,18].forEach(i=>os[i].total_amount=99999999);[19,20].forEach(i=>os[i].harga_total=1)}
+return{cs,os}}
+async function seed(m){const o=$('seedOut');try{const c=cv();o.textContent='Menghapus data lama...';const{cs,os}=gen(m);
+await commit([...(await list(c.stg)).map(r=>del(c.stg,r._id)),...(await list(c.dim)).map(r=>del(c.dim,r._id))]);o.textContent='Menulis data baru...';
+await commit([...cs.map(r=>put(c.dim,r.customer_id,r)),...os.map(r=>put(c.stg,r._id,strip(r)))]);
+o.textContent=`Selesai (${m}): ${cs.length} dokumen di ${c.dim}, ${os.length} dokumen di ${c.stg}. Semua tertulis tanpa error – tampak "hijau".`}catch(e){fail(o,e)}}
 
-// Helper umum
-function writeLog(msg) {
-  const box = document.getElementById("logConsole");
-  box.textContent += `\n[${new Date().toLocaleTimeString()}] ${msg}`;
-  box.scrollTop = box.scrollHeight;
-}
-function esc(s) {
-  return String(s ?? "-").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-const num = v => Number(v || 0).toLocaleString("id-ID");
+const T={unique:(r,t)=>{const m={};r.forEach(x=>{const k=x[t.col];if(k!=null)(m[k]=m[k]||[]).push(x)});return Object.values(m).filter(a=>a.length>1).flat()},
+not_null:(r,t)=>r.filter(x=>x[t.col]==null||x[t.col]===''),
+accepted_values:(r,t)=>r.filter(x=>!t.values.includes(x[t.col])),
+relationships:(r,t,d)=>{const k=new Set(d.map(x=>x[t.field]));return r.filter(x=>x[t.col]!=null&&!k.has(x[t.col]))},
+discount_lte_amount:r=>r.filter(x=>x.total_discount>x.total_amount||x.total_discount<0),
+range:(r,t)=>r.filter(x=>Number.isFinite(x[t.col])&&((t.min!=null&&x[t.col]<t.min)||(t.max!=null&&x[t.col]>t.max))),
+zscore:(r,t)=>{const v=r.map(x=>x[t.col]).filter(Number.isFinite),m=v.reduce((a,b)=>a+b,0)/v.length,sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/v.length)||1;return r.filter(x=>Math.abs((x[t.col]-m)/sd)>t.z)}};
+function runTests(rows,dim){const tests=JSON.parse($('tests').value);
+const res=tests.map(t=>{if(!T[t.type])throw new Error('Tipe test tidak dikenal: '+t.type);return{name:t.type+(t.col?'('+t.col+')':''),col:t.col,fail:T[t.type](rows,t,dim)}});
+let f=new Function('r',`return (${$('custom').value}\n)`)(rows);res.push({name:'custom(assert_no_duplicate_orders)',col:'order_id',fail:Array.isArray(f)?f:[]});S.last=res;return res}
+function table(res){const n=res.filter(x=>x.fail.length).length;return`<table><tr><th>Test</th><th>Hasil</th><th>Baris gagal</th><th>Contoh ID dokumen</th></tr>`+res.map(x=>`<tr><td>${esc(x.name)}</td><td class="${x.fail.length?'bad':'ok'}">${x.fail.length?'FAIL':'PASS'}</td><td>${x.fail.length}</td><td>${esc(x.fail.slice(0,3).map(r=>r._id).join(', '))}</td></tr>`).join('')+`</table><p class="${n?'bad':'ok'}">${res.length-n} dari ${res.length} test lulus${n?' – pipeline harus DIBLOKIR':' – aman dipromosikan ke gold'}.</p>`}
+async function doTests(){const o=$('testOut');try{const c=cv();o.textContent='Membaca Firestore...';const rows=await list(c.stg),dim=await list(c.dim);o.innerHTML=`<p>Model <code>${esc(c.stg)}</code>: ${rows.length} baris.</p>`+table(runTests(rows,dim))}catch(e){fail(o,e)}}
 
-function toFirestoreFields(obj) {
-  const fields = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === "number" && Number.isFinite(v)) fields[k] = Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-    else fields[k] = { stringValue: String(v) };
-  }
-  return { fields };
-}
-function fromFirestoreDoc(doc) {
-  const res = {};
-  for (const [k, v] of Object.entries(doc.fields || {})) {
-    if (v.integerValue !== undefined) res[k] = parseInt(v.integerValue, 10);
-    else if (v.doubleValue !== undefined) res[k] = parseFloat(v.doubleValue);
-    else if (v.stringValue !== undefined) res[k] = v.stringValue;
-  }
-  return res;
-}
-async function upsertDoc(pid, col, docId, data) {
-  const url = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/${col}/${encodeURIComponent(docId)}`;
-  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(toFirestoreFields(data)) });
-  if (!res.ok) throw new Error(`HTTP ${res.status} pada ${col}/${docId}`);
-}
-async function fetchCollection(pid, col) {
-  let out = [], token = "";
-  do {
-    const url = `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/${col}?pageSize=300` + (token ? `&pageToken=${encodeURIComponent(token)}` : "");
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status} saat mengambil ${pid}/${col}`);
-    const json = await res.json();
-    out = out.concat((json.documents || []).map(fromFirestoreDoc));
-    token = json.nextPageToken || "";
-  } while (token);
-  return out;
-}
+async function doCI(){const o=$('ciLog');let L='';const lg=m=>{L+=m+'\n';o.textContent=L};try{const c=cv(),pr=$('pr').value||'1',sb='analytics_pr_'+pr;
+lg(`[1] Branch feature/pr-${pr} dan Pull Request #${pr} dibuat`);const rows=await list(c.stg),dim=await list(c.dim);
+lg(`[2] Runner aktif. Membuat sandbox ${sb} (${rows.length} dokumen)...`);await commit(rows.map(r=>put(sb,r._id,strip(r))));
+const sr=await list(sb);lg('[3] Menjalankan test terhadap sandbox (setara dbt build)...');const res=runTests(sr,dim),bad=res.filter(x=>x.fail.length);
+res.forEach(x=>lg(`    ${x.fail.length?'FAIL':'PASS'}  ${x.name}  (${x.fail.length} baris)`));
+let st;if(bad.length){lg(`[4] ${bad.length} test GAGAL → MERGE DIBLOKIR. Notifikasi Slack (simulasi) terkirim.`);st={state:'BLOCKED',pr:Number(pr),failed_tests:bad.length,at:new Date().toISOString()}}
+else{lg(`[4] Semua test PASS → merge. Promosi ${sr.length} dokumen ke ${c.gold}...`);await commit([...(await list(c.gold)).map(r=>del(c.gold,r._id)),...sr.map(r=>put(c.gold,r._id,strip(r)))]);st={state:'OK',pr:Number(pr),failed_tests:0,at:new Date().toISOString()}}
+await commit([put('_pipeline','status',st)]);lg(`[5] _pipeline/status = ${st.state}`);await commit(sr.map(r=>del(sb,r._id)));lg(`[6] Teardown: sandbox ${sb} dihapus (FinOps).`)}catch(e){fail(o,e)}}
+async function doDash(){const o=$('dash');try{const c=cv(),s=(await list('_pipeline')).find(x=>x._id==='status');
+if(s&&s.state==='BLOCKED'){o.innerHTML=`<p class="warn">Dashboard CEO: MAINTENANCE – data sedang diverifikasi (PR #${s.pr} diblokir, ${s.failed_tests} test gagal).</p>`;return}
+const g=await list(c.gold);o.innerHTML=`<p class="ok">Dashboard CEO: omset Rp ${g.reduce((a,x)=>a+(x.total_amount||0),0).toLocaleString('id-ID')} dari ${g.length} pesanan di ${esc(c.gold)}.</p>`}catch(e){fail(o,e)}}
 
-// Fungsi cleansing & enrichment
-function toTitleCase(str) { return String(str).trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
-function cleanGender(val) {
-  const v = String(val).trim().toLowerCase();
-  if (["l", "laki-laki", "laki", "pria", "cowok", "m", "male"].includes(v)) return "Laki-laki";
-  if (["p", "perempuan", "wanita", "cewek", "f", "female"].includes(v)) return "Perempuan";
-  return "Tidak Diketahui";
-}
-function mapProvinsiPulau(provRaw) {
-  const p = String(provRaw).trim().toLowerCase();
-  const map = {
-    "jatim": ["Jawa Timur", "Jawa"], "jawa timur": ["Jawa Timur", "Jawa"],
-    "jateng": ["Jawa Tengah", "Jawa"], "jawa tengah": ["Jawa Tengah", "Jawa"],
-    "jabar": ["Jawa Barat", "Jawa"], "jawa barat": ["Jawa Barat", "Jawa"],
-    "dki": ["DKI Jakarta", "Jawa"], "jakarta": ["DKI Jakarta", "Jawa"],
-    "diy": ["DI Yogyakarta", "Jawa"], "yogyakarta": ["DI Yogyakarta", "Jawa"],
-    "banten": ["Banten", "Jawa"], "sumut": ["Sumatera Utara", "Sumatera"],
-    "sumbar": ["Sumatera Barat", "Sumatera"], "sumsel": ["Sumatera Selatan", "Sumatera"],
-    "bali": ["Bali", "Bali & Nusa Tenggara"], "kaltim": ["Kalimantan Timur", "Kalimantan"],
-    "kalsel": ["Kalimantan Selatan", "Kalimantan"], "sulsel": ["Sulawesi Selatan", "Sulawesi"]
-  };
-  return map[p] || [toTitleCase(provRaw), "Indonesia"];
-}
-function calcKelompokUsia(tgl) {
-  const age = new Date().getFullYear() - (parseInt(String(tgl).substring(0, 4), 10) || 2000);
-  if (age <= 25) return "Remaja/Muda (<=25)";
-  if (age <= 35) return "Dewasa Muda (26-35)";
-  if (age <= 50) return "Dewasa (36-50)";
-  return "Lansia (>50)";
-}
-function hashCustomerSk(nk) {
-  let h = 0;
-  for (let i = 0; i < nk.length; i++) h = ((h << 5) - h) + nk.charCodeAt(i);
-  return Math.abs(h % 900000) + 100000;
-}
+const COLS=['order_id','customer_id','order_status','total_amount','total_discount','updated_at'];
+async function doObs(){const o=$('obsOut');try{const c=cv(),rows=await list(c.stg),sla=+$('sla').value||12,P=[];
+const runs=(await list('_obs_runs')).sort((a,b)=>a.ts<b.ts?1:-1),prev=runs[0];
+const ts=rows.map(x=>Date.parse(x.updated_at)).filter(Number.isFinite),h=(Date.now()-Math.max(...ts))/36e5;
+P.push(['1. Freshness',h<=sla,`Pembaruan terakhir ${h.toFixed(1)} jam lalu (SLA ${sla} jam)`]);
+const v=rows.map(x=>x.total_amount).filter(Number.isFinite),mean=v.reduce((a,b)=>a+b,0)/(v.length||1);
+if(prev){const d=(mean-prev.mean)/prev.mean;P.push(['2. Distribution',Math.abs(d)<=0.5,`Rata-rata total_amount ${Math.round(mean).toLocaleString('id-ID')} (${(d*100).toFixed(0)}% vs run sebelumnya)`])}else P.push(['2. Distribution',true,`Baseline dicatat: rata-rata ${Math.round(mean).toLocaleString('id-ID')}`]);
+if(prev){const d=(rows.length-prev.rows)/prev.rows;P.push(['3. Volume',Math.abs(d)<=0.3,`${rows.length} baris (${(d*100).toFixed(0)}% vs ${prev.rows} sebelumnya)`])}else P.push(['3. Volume',true,`Baseline dicatat: ${rows.length} baris`]);
+const ks=new Set();rows.forEach(x=>Object.keys(x).forEach(k=>k!=='_id'&&ks.add(k)));const nw=[...ks].filter(k=>!COLS.includes(k)),ms=COLS.filter(k=>!ks.has(k));
+P.push(['4. Schema',!nw.length&&!ms.length,nw.length||ms.length?`Kolom baru: ${nw.join(', ')||'-'}; hilang: ${ms.join(', ')||'-'}`:'Skema sesuai kontrak (6 kolom)']);
+const bad=P.some(p=>!p[1]);P.push(['5. Lineage',!bad,bad?`Terdampak: ${c.stg} → ${c.gold} → dashboard_ceo_omset (tahan pembaruan hilir)`:'Aliran sumber → staging → gold → dashboard sehat']);
+await commit([put('_obs_runs','run_'+Date.now(),{ts:new Date().toISOString(),rows:rows.length,mean:Math.round(mean),status:bad?'ALERT':'HEALTHY'})]);
+o.innerHTML='<table><tr><th>Pilar</th><th>Status</th><th>Temuan</th></tr>'+P.map(p=>`<tr><td>${p[0]}</td><td class="${p[1]?'ok':'bad'}">${p[1]?'SEHAT':'ALERT'}</td><td>${esc(p[2])}</td></tr>`).join('')+'</table>'}catch(e){fail(o,e)}}
 
-// Seeder
-async function seedDataHulu() {
-  const myPid = document.getElementById("myProjectId").value.trim();
-  try {
-    const rows = JSON.parse(document.getElementById("seedJsonInput").value);
-    writeLog(`[SEEDER] Mengunggah ${rows.length} transaksi mentah ke ${myPid}/transaksi_mentah ...`);
-    for (const r of rows) {
-      await upsertDoc(myPid, "transaksi_mentah", r.id_pesanan_nk, r);
-      writeLog(`[SEEDER OK] Dokumen ${r.id_pesanan_nk} berhasil disimpan.`);
-    }
-  } catch (err) {
-    writeLog(`[SEEDER ERROR] ${err.message}`);
-  }
-}
-
-// Task 1: extract multi-Firebase ke landing zone
-async function taskExtractToLanding() {
-  const node = document.getElementById("nodeExtract");
-  node.className = "dag-node running";
-  const myPid = document.getElementById("myProjectId").value.trim();
-  const targets = [...new Set(document.getElementById("targetProjects").value.split(",").map(s => s.trim()).filter(Boolean))];
-  const now = new Date();
-  const partitionPath = `orders/year=${now.getFullYear()}/month=${String(now.getMonth() + 1).padStart(2, "0")}/day=${String(now.getDate()).padStart(2, "0")}`;
-
-  writeLog(`[TASK 1: EXTRACT] Memulai penarikan REST API dari ${targets.length} project Firebase...`);
-  let total = 0;
-  for (const pid of targets) {
-    try {
-      const docs = await fetchCollection(pid, "transaksi_mentah");
-      for (const d of docs) {
-        if (!d.id_pesanan_nk) continue;
-        d.sumber_project = pid;
-        d.partition_path = partitionPath;
-        await upsertDoc(myPid, "landing_zone_raw", d.id_pesanan_nk, d);
-        total++;
-      }
-      writeLog(`[EXTRACT OK] Berhasil menyedot ${docs.length} dokumen dari project '${pid}'`);
-    } catch (err) {
-      writeLog(`[EXTRACT WARN] Gagal menarik dari '${pid}': ${err.message} (melewati project ini...)`);
-    }
-  }
-  node.className = total > 0 ? "dag-node success" : "dag-node failed";
-  writeLog(`[LANDING ZONE SELESAI] Total ${total} dokumen mentah disimpan di '${myPid}/landing_zone_raw' (${partitionPath})`);
-}
-
-// Task 2: transform ke 6 koleksi skema bintang
-async function taskTransformToStarSchema() {
-  const node = document.getElementById("nodeTransform");
-  node.className = "dag-node running";
-  const myPid = document.getElementById("myProjectId").value.trim();
-  const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  const namaBulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-  try {
-    writeLog(`[TASK 2: TRANSFORM] Membaca data mentah dari '${myPid}/landing_zone_raw'...`);
-    const rawDocs = await fetchCollection(myPid, "landing_zone_raw");
-    let ok = 0, skip = 0;
-
-    for (const r of rawDocs) {
-      try {
-        const dt = new Date(r.tanggal_penjualan);
-        if (isNaN(dt)) throw new Error("tanggal_penjualan tidak valid");
-        const y = dt.getFullYear(), m = dt.getMonth() + 1, day = dt.getDate();
-        const sk_waktu = parseInt(`${y}${String(m).padStart(2, "0")}${String(day).padStart(2, "0")}`, 10);
-        await upsertDoc(myPid, "dim_waktu", String(sk_waktu), {
-          sk_waktu, tanggal_penjualan: r.tanggal_penjualan, hari: day, bulan: m, nama_bulan: namaBulan[m],
-          kuartal: `Q${Math.floor((m - 1) / 3) + 1}`, tahun: y, nama_hari: namaHari[dt.getDay()]
-        });
-
-        const prd = MASTER_PRODUK[r.id_produk_nk] || MASTER_PRODUK["PRD-001"];
-        await upsertDoc(myPid, "dim_produk", String(prd.sk), {
-          sk_produk: prd.sk, id_produk_nk: r.id_produk_nk, nama_produk: prd.nama, merek: prd.merek,
-          harga_dasar: prd.harga_dasar, nama_kategori: prd.kat, nama_kategori_indk: prd.induk,
-          nama_supplier: prd.sup, kota_supplier: prd.kota_sup
-        });
-
-        const sk_pelanggan = hashCustomerSk(String(r.id_pelanggan_nk));
-        const [provBersih, pulau] = mapProvinsiPulau(r.nama_provinsi);
-        const namaBersih = toTitleCase(r.nama_pelanggan);
-        const genderBersih = cleanGender(r.jenis_kelamin);
-        await upsertDoc(myPid, "dim_pelanggan", String(sk_pelanggan), {
-          sk_pelanggan, id_pelanggan_nk: r.id_pelanggan_nk, nama_pelanggan: namaBersih, jenis_kelamin: genderBersih,
-          tanggal_lahir: r.tanggal_lahir, kelompok_usia: calcKelompokUsia(r.tanggal_lahir), alamat: r.alamat,
-          nama_kota: toTitleCase(r.nama_kota), nama_provinsi: provBersih, pulau
-        });
-
-        const kur = MASTER_KURIR[r.id_kurir_nk] || MASTER_KURIR["KUR-01"];
-        await upsertDoc(myPid, "dim_kurir", String(kur.sk), {
-          sk_kurir: kur.sk, id_kurir_nk: r.id_kurir_nk, nama_kurir: kur.nama, jenis_layanan: kur.layanan
-        });
-
-        const byr = MASTER_BAYAR[r.id_metode_bayar_nk] || MASTER_BAYAR["PAY-01"];
-        await upsertDoc(myPid, "dim_metode_bayar", String(byr.sk), {
-          sk_metode_bayar: byr.sk, id_metode_bayar_nk: r.id_metode_bayar_nk, nama_metode: byr.nama, jenis_metode: byr.jenis
-        });
-
-        const jumlah = Math.abs(parseInt(r.jumlah, 10)) || 1;
-        const harga = parseInt(r.harga_satuan, 10) || prd.harga_dasar;
-        const bruto = jumlah * harga;
-        const diskonRp = Math.round(bruto * ((parseFloat(String(r.diskon_persen || "0").replace("%", "")) || 0) / 100));
-        const neto = bruto - diskonRp;
-        await upsertDoc(myPid, "fakta_penjualan", r.id_pesanan_nk, {
-          sk_waktu, sk_produk: prd.sk, sk_pelanggan, sk_kurir: kur.sk, sk_metode_bayar: byr.sk,
-          id_pesanan_nk: r.id_pesanan_nk, jumlah, harga_satuan: harga, diskon: diskonRp,
-          total_harga_bruto: bruto, total_penjualan_neto: neto, ongkos_kirim: parseInt(r.ongkos_kirim, 10) || 0
-        });
-
-        ok++;
-        writeLog(`[TRANSFORM OK] ${r.id_pesanan_nk}: '${r.nama_pelanggan}' (${r.jenis_kelamin}, ${r.nama_provinsi}) -> '${namaBersih}' (${genderBersih}, ${provBersih} - Pulau ${pulau}) | Neto: Rp ${num(neto)}`);
-      } catch (rowErr) {
-        skip++;
-        writeLog(`[TRANSFORM SKIP] ${r.id_pesanan_nk || "(tanpa id)"}: ${rowErr.message}`);
-      }
-    }
-    node.className = "dag-node success";
-    writeLog(`[STAR SCHEMA SELESAI] ${ok} baris diproses, ${skip} dilewati. Koleksi dimensi & fakta diperbarui di Firestore!`);
-  } catch (err) {
-    node.className = "dag-node failed";
-    writeLog(`[TRANSFORM ERROR] ${err.message}`);
-  }
-}
-
-// Task 3: tabel Before vs After
-async function taskRenderTables() {
-  const node = document.getElementById("nodeVerify");
-  node.className = "dag-node running";
-  const myPid = document.getElementById("myProjectId").value.trim();
-
-  try {
-    writeLog(`[TASK 3: OLAP JOIN] Mengambil data Landing Zone & 6 koleksi Skema Bintang...`);
-    const [rawList, faktaList, waktuList, produkList, pelangganList, kurirList, bayarList] = await Promise.all([
-      "landing_zone_raw", "fakta_penjualan", "dim_waktu", "dim_produk", "dim_pelanggan", "dim_kurir", "dim_metode_bayar"
-    ].map(c => fetchCollection(myPid, c)));
-
-    let htmlRaw = `<table><thead><tr><th>id_pesanan_nk</th><th>sumber_project</th><th>partition_path</th><th>nama_pelanggan (Raw)</th><th>jenis_kelamin (Raw)</th><th>provinsi (Raw)</th><th>jumlah (Raw)</th><th>diskon_persen</th></tr></thead><tbody>`;
-    for (const r of rawList) {
-      htmlRaw += `<tr><td>${esc(r.id_pesanan_nk)}</td><td>${esc(r.sumber_project)}</td><td><code>${esc(r.partition_path)}</code></td><td>${esc(r.nama_pelanggan)}</td><td>${esc(r.jenis_kelamin)}</td><td>${esc(r.nama_provinsi)}</td><td>${esc(r.jumlah)}</td><td>${esc(r.diskon_persen)}</td></tr>`;
-    }
-    document.getElementById("rawTableContainer").innerHTML = htmlRaw + `</tbody></table>`;
-
-    const idx = (list, key) => Object.fromEntries(list.map(x => [x[key], x]));
-    const mapW = idx(waktuList, "sk_waktu"), mapPr = idx(produkList, "sk_produk"), mapPl = idx(pelangganList, "sk_pelanggan"),
-          mapK = idx(kurirList, "sk_kurir"), mapB = idx(bayarList, "sk_metode_bayar");
-
-    let htmlDwh = `<table><thead><tr><th>id_pesanan_nk</th><th>Tanggal & Kuartal</th><th>Pelanggan (Bersih)</th><th>Gender</th><th>Kelompok Usia</th><th>Provinsi & Pulau</th><th>Produk & Merek</th><th>Kurir & Bayar</th><th>Qty</th><th>Bruto (Rp)</th><th>Diskon (Rp)</th><th>Neto (Rp)</th></tr></thead><tbody>`;
-    for (const f of faktaList) {
-      const w = mapW[f.sk_waktu] || {}, pr = mapPr[f.sk_produk] || {}, pl = mapPl[f.sk_pelanggan] || {},
-            k = mapK[f.sk_kurir] || {}, b = mapB[f.sk_metode_bayar] || {};
-      htmlDwh += `<tr>
-        <td><strong>${esc(f.id_pesanan_nk)}</strong></td>
-        <td>${esc(w.tanggal_penjualan)} (${esc(w.kuartal)}, ${esc(w.nama_hari)})</td>
-        <td>${esc(pl.nama_pelanggan)}</td><td>${esc(pl.jenis_kelamin)}</td><td>${esc(pl.kelompok_usia)}</td>
-        <td>${esc(pl.nama_provinsi)} (<strong>${esc(pl.pulau)}</strong>)</td>
-        <td>${esc(pr.nama_produk)} (${esc(pr.merek)})</td>
-        <td>${esc(k.nama_kurir)} / ${esc(b.nama_metode)}</td>
-        <td>${esc(f.jumlah)}</td><td>${num(f.total_harga_bruto)}</td><td>${num(f.diskon)}</td>
-        <td style="background:#f0fff4; font-weight:bold; color:#22543d;">${num(f.total_penjualan_neto)}</td>
-      </tr>`;
-    }
-    document.getElementById("dwhTableContainer").innerHTML = htmlDwh + `</tbody></table>`;
-
-    node.className = "dag-node success";
-    writeLog(`[OLAP JOIN SELESAI] Menampilkan perbandingan ${rawList.length} data mentah vs ${faktaList.length} baris Fakta Penjualan!`);
-  } catch (err) {
-    node.className = "dag-node failed";
-    writeLog(`[OLAP ERROR] ${err.message}`);
-  }
-}
-
-// Trigger full DAG
-async function runFullDagPipeline() {
-  writeLog(`======================================================`);
-  writeLog(`[AIRFLOW DAG TRIGGERED] Menjalankan dag_ingestion_retail...`);
-  await taskExtractToLanding();
-  await taskTransformToStarSchema();
-  await taskRenderTables();
-  writeLog(`[DAG RUN COMPLETED] Seluruh rangkaian Task selesai dieksekusi!`);
-}
-</script>
-</body>
-</html>
+const META={order_id:'ID unik pesanan (primary key)',customer_id:'FK ke dim_customers',order_status:'Status: placed / shipped / delivered',total_amount:'Total belanja (Rupiah)',total_discount:'Diskon (Rupiah), tidak boleh melebihi total belanja',updated_at:'Waktu pembaruan terakhir (ISO 8601)'};
+async function doCat(){const o=$('catOut');try{const c=cv(),res=S.last;
+const cols=COLS.map(k=>{const r=(res||[]).filter(x=>x.col===k||(k==='total_amount'&&x.name.startsWith('discount')));const st=!res?'BELUM DIUJI':r.length===0?'TANPA TEST':r.every(x=>!x.fail.length)?'LULUS':'GAGAL';return{kolom:k,deskripsi:META[k],tests:r.map(x=>x.name).join('; ')||'-',status:st}});
+await commit([put('_catalog',c.stg,{model:c.stg,jumlah_kolom:cols.length,kolom_json:JSON.stringify(cols),lineage:`${c.stg} → ${c.gold} → dashboard_ceo_omset`,generated_at:new Date().toISOString()})]);
+o.innerHTML=`<p>Model <code>${esc(c.stg)}</code> · Lineage: ${esc(c.stg)} → ${esc(c.gold)} → dashboard_ceo_omset${res?'':'<br><span class="warn">Jalankan tab Tests dulu agar lencana mutu terisi.</span>'}</p><table><tr><th>Kolom</th><th>Deskripsi</th><th>Test terpasang</th><th>Lencana mutu</th></tr>`+cols.map(x=>`<tr><td><code>${x.kolom}</code></td><td>${esc(x.deskripsi)}</td><td>${esc(x.tests)}</td><td class="${x.status==='LULUS'?'ok':x.status==='GAGAL'?'bad':'warn'}">${x.status}</td></tr>`).join('')+'</table>'}catch(e){fail(o,e)}}
+</script></body></html>
